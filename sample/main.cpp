@@ -6,6 +6,7 @@
 #include <QPushButton>
 #include <QLineEdit>
 #include <QKeyEvent>
+#include <QThread>
 
 int main(int argc, char *argv[])
 {
@@ -23,7 +24,11 @@ int main(int argc, char *argv[])
 
         rxqt::from_signal(e0, &QLineEdit::textChanged)
                 .map([](const QString& s){ return "[[["+s+"]]]"; })
-                .subscribe([e1](const QString& s){ e1->setText(s); });
+                .delay(rxcpp::serialize_qt_event_loop(), std::chrono::seconds(1))
+                .subscribe([e1](const QString& s){
+            Q_ASSERT(QApplication::instance()->thread() == QThread::currentThread());
+            e1->setText(s);
+        });
 
         rxqt::from_event(e0, QEvent::KeyPress)
                 .subscribe([](const QEvent* e){

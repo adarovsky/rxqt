@@ -1,6 +1,6 @@
 QT += core widgets
 
-CONFIG += c++11
+CONFIG += c++14
 
 TARGET = rxsample
 CONFIG += console
@@ -8,7 +8,7 @@ CONFIG -= app_bundle
 
 TEMPLATE = app
 
-INCLUDEPATH += Rx\v2\src
+INCLUDEPATH += Rx/v2/src
 INCLUDEPATH += include
 
 SOURCES += \
@@ -17,5 +17,6 @@ SOURCES += \
 HEADERS += \
     include/rxqt.hpp \
     include/rxqt_signal.hpp \
-    include/rxqt_event.hpp
+    include/rxqt_event.hpp \
+    include/rxqt-eventloop.hpp
 
