@@ -24,7 +24,8 @@ int main(int argc, char *argv[])
 
         rxqt::from_signal(e0, &QLineEdit::textChanged)
                 .map([](const QString& s){ return "[[["+s+"]]]"; })
-                .delay(rxcpp::serialize_qt_event_loop(), std::chrono::seconds(1))
+                .delay(rxcpp::serialize_event_loop(), std::chrono::seconds(1))
+                .observe_on(rxcpp::observe_on_qt_event_loop())
                 .subscribe([e1](const QString& s){
             Q_ASSERT(QApplication::instance()->thread() == QThread::currentThread());
             e1->setText(s);

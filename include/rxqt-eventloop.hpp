@@ -5,6 +5,7 @@
 #include <rxcpp/rx-includes.hpp>
 #include <QScopedPointer>
 #include <QTimer>
+#include <QtDebug>
 
 namespace rxcpp {
 
@@ -24,8 +25,9 @@ private:
 
         qtimer_worker(const this_type&);
 
-        struct qtimer_worker_state : public QObject, public std::enable_shared_from_this<qtimer_worker_state>
+        class qtimer_worker_state : public QObject, public std::enable_shared_from_this<qtimer_worker_state>
         {
+        public:
             typedef detail::schedulable_queue<
                 typename clock_type::time_point> queue_item_time;
 
@@ -41,7 +43,7 @@ private:
                 : lifetime(cs)
             {
                 timer.setSingleShot(true);
-                QObject::connect(&timer, &QTimer::timeout, this, &qtimer_worker_state::setup_timer);
+                QObject::connect(&timer, &QTimer::timeout, this, &qtimer_worker_state::setup_timer, Qt::QueuedConnection);
             }
 
             void setup_timer()
@@ -107,7 +109,8 @@ private:
                 state->q.push(qtimer_worker_state::item_type(when, scbl));
                 state->r.reset(false);
             }
-            state->setup_timer();
+            QObject stub;
+            QObject::connect(&stub, &QObject::destroyed, state.get(), &qtimer_worker_state::setup_timer);
         }
     };
 
@@ -138,6 +141,11 @@ inline scheduler make_qt_event_loop() {
 
 inline serialize_one_worker serialize_qt_event_loop() {
     static serialize_one_worker r(rxsc::make_qt_event_loop());
+    return r;
+}
+
+inline observe_on_one_worker observe_on_qt_event_loop() {
+    static observe_on_one_worker r(rxsc::make_qt_event_loop());
     return r;
 }
 
