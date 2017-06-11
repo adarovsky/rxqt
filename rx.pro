@@ -19,5 +19,5 @@ HEADERS += \
     include/rxqt_signal.hpp \
     include/rxqt_event.hpp \
     include/rxqt-eventloop.hpp \
-    include/rx-drop_backpressure.hpp
+    include/rx-drop_map.hpp
 

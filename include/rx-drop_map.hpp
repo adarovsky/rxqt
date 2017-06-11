@@ -35,6 +35,8 @@
 
 namespace rxcpp {
 
+struct drop_map_tag {};
+
 namespace operators {
 
 namespace detail {
