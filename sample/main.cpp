@@ -16,14 +16,17 @@ int main(int argc, char *argv[])
     auto layout = new QVBoxLayout;
     widget->setLayout(layout);
     {
-        auto e0 = new QLineEdit("Edit here");
+        auto e0 = new QLineEdit("");
+        auto e01 = new QLineEdit("");
         auto e1 = new QLineEdit;
         e1->setEnabled(false);
         layout->addWidget(e0);
+        layout->addWidget(e01);
         layout->addWidget(e1);
 
         rxqt::from_signal(e0, &QLineEdit::textChanged)
-                .map([](const QString& s){ return "[[["+s+"]]]"; })
+                .zip(rxqt::from_signal(e01, &QLineEdit::textChanged))
+                .map([](auto tuple){ return "(" + std::get<0>(tuple) + ") - (" + std::get<1>(tuple) + ")"; })
                 .delay(rxcpp::serialize_event_loop(), std::chrono::seconds(1))
                 .observe_on(rxcpp::observe_on_qt_event_loop())
                 .subscribe([e1](const QString& s){

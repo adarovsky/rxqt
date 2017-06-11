@@ -43,10 +43,10 @@ private:
                 : lifetime(cs)
             {
                 timer.setSingleShot(true);
-                QObject::connect(&timer, &QTimer::timeout, this, &qtimer_worker_state::setup_timer, Qt::QueuedConnection);
+                QObject::connect(&timer, &QTimer::timeout, this, &qtimer_worker_state::handle_queue, Qt::QueuedConnection);
             }
 
-            void setup_timer()
+            void handle_queue()
             {
                 while (!q.empty()) {
                     auto& peek = q.top();
@@ -110,7 +110,7 @@ private:
                 state->r.reset(false);
             }
             QObject stub;
-            QObject::connect(&stub, &QObject::destroyed, state.get(), &qtimer_worker_state::setup_timer);
+            QObject::connect(&stub, &QObject::destroyed, state.get(), &qtimer_worker_state::handle_queue);
         }
     };
 
