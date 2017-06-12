@@ -1,10 +1,12 @@
-QT += core widgets
+QT += core widgets concurrent
 
 CONFIG += c++14
 
 TARGET = rxsample
 CONFIG += console
 CONFIG -= app_bundle
+
+#QMAKE_CXXFLAGS += -fsanitize=thread
 
 TEMPLATE = app
 
