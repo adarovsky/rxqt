@@ -12,6 +12,8 @@
 #include <QtConcurrent>
 #include <QFutureWatcher>
 
+#include "sampledump.h"
+
 namespace rxo = rxcpp::operators;
 
 std::random_device rd;
@@ -26,14 +28,6 @@ struct SampleWorker {
         auto p = 200 + dist(rd);
         QThread::currentThread()->msleep(p);
         return QString("w%1: %2-%3").arg(name, text, QString::number(counter++));
-    }
-};
-
-class SampleDump : public QObject {
-    Q_OBJECT
-public slots:
-    void debugPrint( const QString& x, int y ) {
-        qDebug() << "debugPrint(" << x << ", " << y << ")";
     }
 };
 
@@ -87,14 +81,14 @@ int main(int argc, char *argv[])
                 | rxo::ref_count();
 //                | rxo::observe_on(rxcpp::observe_on_qt_event_loop());
 
-        sig.subscribe(rxqt::to_slot(e1, &QLineEdit::setText));
+        rxqt::to_slot(e1, &QLineEdit::setText) << sig;
 
 
         auto sig2 = sig | rxo::map([](const QString & x) {
             return std::make_tuple(x, 1);
         });
 
-        sig2.subscribe(rxqt::to_slot(&dump, &SampleDump::debugPrint));
+        rxqt::to_slot(&dump, &SampleDump::debugPrint) << sig2;
 
     }
     widget->resize(700, 200);

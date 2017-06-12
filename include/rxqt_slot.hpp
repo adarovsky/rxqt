@@ -114,7 +114,10 @@ to_slot(Q* qobject, R(Q::*slot)(Args...))
 
 } // qtrx
 
-//template <class R, class Q, class ...Args>
-//rxcpp::subscriber<typename slot::detail::get_slot_factory<R, Q, Args...>::type::value_type>
-//auto operator << (
+template<class T, class SlotFactory, class SourceOperator>
+auto operator << (SlotFactory&& subscriber, const rxcpp::observable<T, SourceOperator>& source)
+{
+    return source.subscribe(std::forward<SlotFactory>(subscriber));
+}
+
 #endif // RXQT_SLOT_HPP

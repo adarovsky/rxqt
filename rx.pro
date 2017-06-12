@@ -14,7 +14,8 @@ INCLUDEPATH += Rx/v2/src
 INCLUDEPATH += include
 
 SOURCES += \
-    sample/main.cpp
+    sample/main.cpp \
+    sample/sampledump.cpp
 
 HEADERS += \
     include/rxqt.hpp \
@@ -22,5 +23,6 @@ HEADERS += \
     include/rxqt_event.hpp \
     include/rxqt-eventloop.hpp \
     include/rx-drop_map.hpp \
-    include/rxqt_slot.hpp
+    include/rxqt_slot.hpp \
+    sample/sampledump.h
 
