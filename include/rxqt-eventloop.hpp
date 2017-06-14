@@ -35,6 +35,7 @@ private:
 
             virtual ~qtimer_worker_state()
             {
+                std::unique_lock<std::mutex> guard(lock);
                 timer.stop();
                 lifetime.unsubscribe();
             }
@@ -48,7 +49,10 @@ private:
 
             void handle_queue()
             {
-                while (!q.empty()) {
+                forever {
+                    std::unique_lock<std::mutex> guard(lock);
+                    if (q.empty()) break;
+
                     auto& peek = q.top();
                     if (!peek.what.is_subscribed()) {
                         q.pop();
@@ -60,6 +64,7 @@ private:
                         auto what = peek.what;
                         q.pop();
                         r.reset(q.empty());
+                        guard.unlock();
                         what(r.get_recurse());
                         continue;
                     }
@@ -71,6 +76,7 @@ private:
             }
 
             composite_subscription lifetime;
+            mutable std::mutex lock;
             mutable queue_item_time q;
             QTimer timer;
             recursion r;
@@ -90,6 +96,7 @@ private:
             auto keepAlive = state;
 
             state->lifetime.add([keepAlive](){
+                std::unique_lock<std::mutex> guard(keepAlive->lock);
                 auto expired = std::move(keepAlive->q);
                 if (!keepAlive->q.empty()) std::terminate();
                 keepAlive->timer.stop();
