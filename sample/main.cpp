@@ -1,6 +1,7 @@
 #include <rxqt.hpp>
 #include "rx-drop_map.hpp"
 #include <random>
+#include <functional>
 #include <QDebug>
 #include <QApplication>
 #include <QWidget>
@@ -47,6 +48,7 @@ int main(int argc, char *argv[])
 
     auto widget = std::unique_ptr<QWidget>(new QWidget());
     auto layout = new QVBoxLayout;
+    auto thread = rxcpp::observe_on_event_loop();
     widget->setLayout(layout);
     {
         auto e0 = new QLineEdit("");
@@ -55,37 +57,38 @@ int main(int argc, char *argv[])
         layout->addWidget(e0);
         layout->addWidget(e1);
 
+        auto process = [&list](auto text) {
+            QTime time; time.start();
+            return rxcpp::observable<>::create<QString>([text, list, time](const rxcpp::subscriber<QString>& s){
+                std::function<QString(QSharedPointer<SampleWorker>)> f([text] (QSharedPointer<SampleWorker> w) {
+                    return w->process(text);
+                });
+
+                auto future = QtConcurrent::mappedReduced(list, f, reduce);
+                auto watcher = new QFutureWatcher<QStringList>;
+                QObject::connect(watcher, &QFutureWatcher<QStringList>::resultReadyAt, [watcher, s, time](int) {
+                    auto result = watcher->future().result();
+                    if (s.is_subscribed())
+                        s.on_next(result.join(", "));
+                    s.on_completed();
+                    delete watcher;
+                    qDebug() << "total execution time:" << time.elapsed() << "msec";
+                });
+                watcher->setFuture(future);
+            });
+        };
+
         auto sig =
         rxqt::from_signal(e0, &QLineEdit::textChanged)
-                | rxo::drop_map([&list](auto text) {
-                      QTime time; time.start();
-                      return rxcpp::observable<>::create<QString>([text, list, time](const rxcpp::subscriber<QString>& s){
-                          std::function<QString(QSharedPointer<SampleWorker>)> f([text] (QSharedPointer<SampleWorker> w) {
-                              return w->process(text);
-                          });
-
-                          auto future = QtConcurrent::mappedReduced(list, f, reduce);
-                          auto watcher = new QFutureWatcher<QStringList>;
-                          QObject::connect(watcher, &QFutureWatcher<QStringList>::resultReadyAt, [watcher, s, time](int) {
-                              auto result = watcher->future().result();
-                              if (s.is_subscribed())
-                                  s.on_next(result.join(", "));
-                              s.on_completed();
-                              delete watcher;
-                              qDebug() << "total execution time:" << time.elapsed() << "msec";
-                          });
-                          watcher->setFuture(future);
-                      });
-                  })
+                | rxo::drop_map(process)
                 | rxo::publish()
                 | rxo::ref_count();
-//                | rxo::observe_on(rxcpp::observe_on_qt_event_loop());
 
         rxqt::to_slot(e1, &QLineEdit::setText) << sig;
 
-
-        auto sig2 = sig | rxo::map([](const QString & x) {
-            return std::make_tuple(x, 1);
+        int counter = 1;
+        auto sig2 = sig | rxo::map([&counter](const QString & x) {
+            return std::make_tuple(x, counter++);
         });
 
         rxqt::to_slot(&dump, &SampleDump::debugPrint) << sig2;
