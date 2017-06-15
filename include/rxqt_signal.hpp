@@ -16,13 +16,6 @@ template <class _Tp> using remove_cv_t = typename std::remove_cv<_Tp>::type;
 template <class _Tp> using remove_reference_t = typename std::remove_reference<_Tp>::type;
 template <size_t _Ip, class ..._Tp>
 using tuple_element_t = typename std::tuple_element <_Ip, _Tp...>::type;
-
-template<size_t... _Ip>
-using index_sequence = std::integer_sequence<size_t, _Ip...>;
-
-template<size_t _Np>
-    using make_index_sequence = std::make_integer_sequence<size_t, _Np>;
-
 }
 
 template <class R, class Q, class ...Args>
@@ -105,7 +98,7 @@ template <class R, class Q, class T, class U>
 struct construct_signal_type;
 
 template <class R, class Q, class T, std::size_t... Is>
-struct construct_signal_type<R, Q, T, helpers::index_sequence<Is...>>
+struct construct_signal_type<R, Q, T, std::integer_sequence<size_t, Is...>>
 {
     using type = from_signal<R, Q, helpers::tuple_element_t<Is, T>...>;
 };
@@ -117,7 +110,7 @@ struct get_signal_factory
     static constexpr bool has_private_signal =
         is_private_signal<Q, helpers::tuple_element_t<sizeof...(Args) - 1, as_tuple>>::value;
     static constexpr size_t arg_count = has_private_signal ? sizeof...(Args) - 1 : sizeof...(Args);
-    using type = typename construct_signal_type<R, Q, as_tuple, helpers::make_index_sequence<arg_count>>::type;
+    using type = typename construct_signal_type<R, Q, as_tuple, std::make_integer_sequence<size_t, arg_count>>::type;
 };
 
 template <class R, class Q>
