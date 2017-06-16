@@ -115,7 +115,8 @@ to_slot(Q* qobject, R(Q::*slot)(Args...))
 } // qtrx
 
 template<class T, class SlotFactory, class SourceOperator>
-auto operator << (SlotFactory&& subscriber, const rxcpp::observable<T, SourceOperator>& source)
+std::enable_if_t<rxcpp::is_subscriber<SlotFactory>::value, rxcpp::composite_subscription>
+operator << (SlotFactory&& subscriber, const rxcpp::observable<T, SourceOperator>& source)
 {
     return source.subscribe(std::forward<SlotFactory>(subscriber));
 }
