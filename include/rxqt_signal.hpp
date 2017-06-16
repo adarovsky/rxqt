@@ -11,25 +11,12 @@ namespace rxqt {
 namespace signal {
 
 namespace detail {
-namespace helpers {
-template <class _Tp> using remove_cv_t = typename std::remove_cv<_Tp>::type;
-template <class _Tp> using remove_reference_t = typename std::remove_reference<_Tp>::type;
-template <size_t _Ip, class ..._Tp>
-using tuple_element_t = typename std::tuple_element <_Ip, _Tp...>::type;
-
-template<size_t... _Ip>
-using index_sequence = std::integer_sequence<size_t, _Ip...>;
-
-template<size_t _Np>
-    using make_index_sequence = std::make_integer_sequence<size_t, _Np>;
-
-}
 
 template <class R, class Q, class ...Args>
 struct from_signal
 {
     using signal_type = R(Q::*)(Args...);
-    using value_type = std::tuple<helpers::remove_cv_t<helpers::remove_reference_t<Args>>...>;
+    using value_type = std::tuple<std::remove_cv_t<std::remove_reference_t<Args>>...>;
 
     static rxcpp::observable<value_type> create(const Q* qobject, signal_type signal)
     {
@@ -76,7 +63,7 @@ template <class R, class Q, class A0>
 struct from_signal<R, Q, A0>
 {
     using signal_type = R(Q::*)(A0);
-    using value_type = helpers::remove_cv_t<helpers::remove_reference_t<A0>>;
+    using value_type = std::remove_cv_t<std::remove_reference_t<A0>>;
 
     static rxcpp::observable<value_type> create(const Q* qobject, signal_type signal)
     {
@@ -105,9 +92,9 @@ template <class R, class Q, class T, class U>
 struct construct_signal_type;
 
 template <class R, class Q, class T, std::size_t... Is>
-struct construct_signal_type<R, Q, T, helpers::index_sequence<Is...>>
+struct construct_signal_type<R, Q, T, std::index_sequence<Is...>>
 {
-    using type = from_signal<R, Q, helpers::tuple_element_t<Is, T>...>;
+    using type = from_signal<R, Q, std::tuple_element_t<Is, T>...>;
 };
 
 template <class R, class Q, class ...Args>
@@ -115,9 +102,9 @@ struct get_signal_factory
 {
     using as_tuple = std::tuple<Args...>;
     static constexpr bool has_private_signal =
-        is_private_signal<Q, helpers::tuple_element_t<sizeof...(Args) - 1, as_tuple>>::value;
+        is_private_signal<Q, std::tuple_element_t<sizeof...(Args) - 1, as_tuple>>::value;
     static constexpr size_t arg_count = has_private_signal ? sizeof...(Args) - 1 : sizeof...(Args);
-    using type = typename construct_signal_type<R, Q, as_tuple, helpers::make_index_sequence<arg_count>>::type;
+    using type = typename construct_signal_type<R, Q, as_tuple, std::make_index_sequence<arg_count>>::type;
 };
 
 template <class R, class Q>
