@@ -6,6 +6,7 @@
 #include <QScopedPointer>
 #include <QTimer>
 #include <QtDebug>
+#include <QTimerEvent>
 
 namespace rxcpp {
 
@@ -35,23 +36,33 @@ private:
 
             virtual ~qtimer_worker_state()
             {
+//                qDebug() << this << ": thread(" << QThread::currentThreadId() << "), : deallocating, timer";
                 std::unique_lock<std::mutex> guard(lock);
-                timer.stop();
+                kill_timer();
                 lifetime.unsubscribe();
+//                qDebug() << this << ": deallocating done, timer";
             }
 
             explicit qtimer_worker_state(composite_subscription cs)
                 : lifetime(cs)
             {
-                timer.setSingleShot(true);
-                QObject::connect(&timer, &QTimer::timeout, this, &qtimer_worker_state::handle_queue, Qt::QueuedConnection);
+            }
+
+            void timerEvent(QTimerEvent * event)
+            {
+//                qDebug() << this << ": thread(" << QThread::currentThreadId() << "), : timer event from timer" << event->timerId();
+                handle_queue();
             }
 
             void handle_queue()
             {
+//                qDebug() << this << ": thread(" << QThread::currentThreadId() << "), : handle_queue()";
                 forever {
                     std::unique_lock<std::mutex> guard(lock);
-                    if (q.empty()) break;
+                    if (q.empty()) {
+                        kill_timer();
+                        break;
+                    }
 
                     auto& peek = q.top();
                     if (!peek.what.is_subscribed()) {
@@ -70,15 +81,28 @@ private:
                     }
 
                     auto d = std::chrono::duration_cast<std::chrono::milliseconds>(peek.when - now);
-                    timer.start(d.count());
+                    schedule_timer(d);
                     break;
                 }
+            }
+
+            void kill_timer() {
+                if (!current_timer.empty()) {
+//                    qDebug() << this << ": thread(" << QThread::currentThreadId() << "), killing timer" << current_timer.get();
+                    killTimer(current_timer.get());
+                }
+            }
+
+            void schedule_timer(std::chrono::milliseconds timeout) {
+                kill_timer();
+                current_timer.reset(startTimer(timeout, Qt::PreciseTimer));
+//                qDebug() << this << ": thread(" << QThread::currentThreadId() << "), started timer" << current_timer.get();
             }
 
             composite_subscription lifetime;
             mutable std::mutex lock;
             mutable queue_item_time q;
-            QTimer timer;
+            rxcpp::util::maybe<int> current_timer;
             recursion r;
         };
 
@@ -99,7 +123,7 @@ private:
                 std::unique_lock<std::mutex> guard(keepAlive->lock);
                 auto expired = std::move(keepAlive->q);
                 if (!keepAlive->q.empty()) std::terminate();
-                keepAlive->timer.stop();
+                keepAlive->kill_timer();
             });
         }
 
@@ -112,12 +136,19 @@ private:
         }
 
         virtual void schedule(clock_type::time_point when, const schedulable& scbl) const {
-            if (scbl.is_subscribed()) {
-                state->q.push(qtimer_worker_state::item_type(when, scbl));
-                state->r.reset(false);
+            QObject stub; {
+                auto keepAlive = state;
+                std::unique_lock<std::mutex> guard(keepAlive->lock);
+                if (scbl.is_subscribed()) {
+                    keepAlive->q.push(qtimer_worker_state::item_type(when, scbl));
+                    keepAlive->r.reset(false);
+                }
+                guard.unlock();
+
+                QObject::connect(&stub, &QObject::destroyed, keepAlive.get(), [keepAlive]() {
+                    keepAlive->handle_queue();
+                });
             }
-            QObject stub;
-            QObject::connect(&stub, &QObject::destroyed, state.get(), &qtimer_worker_state::handle_queue);
         }
     };
 
