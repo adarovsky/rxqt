@@ -23,6 +23,7 @@ HEADERS += \
     include/rxqt_event.hpp \
     include/rxqt-eventloop.hpp \
     include/rx-drop_map.hpp \
+    include/rx-chunk_by.hpp \
     include/rxqt_slot.hpp \
     sample/sampledump.h
 

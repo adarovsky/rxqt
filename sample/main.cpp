@@ -1,5 +1,6 @@
 #include <rxqt.hpp>
 #include "rx-drop_map.hpp"
+#include "rx-chunk_by.hpp"
 #include <random>
 #include <functional>
 #include <QDebug>

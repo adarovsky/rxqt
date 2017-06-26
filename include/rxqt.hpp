@@ -7,4 +7,6 @@
 #include <rxqt_slot.hpp>
 #include <rxqt_event.hpp>
 #include <rxqt-eventloop.hpp>
+#include <rxqt_util.hpp>
+
 #endif // RXQT_H

@@ -1,7 +1,9 @@
-[![Linux and OS X Build Status](https://travis-ci.org/tetsurom/rxqt.svg?branch=master)](https://travis-ci.org/tetsurom/rxqt)
+Build Status
 
-[![Windows Build Status](https://ci.appveyor.com/api/projects/status/github/tetsurom/rxqt?svg=true)](https://ci.appveyor.com/api/projects/status/github/tetsurom/rxqt)
-
+| Platform | Status |
+|:---------|:-------|
+|Linux and OS X|[![Linux and OS X Build Status](https://travis-ci.org/tetsurom/rxqt.svg?branch=master)](https://travis-ci.org/tetsurom/rxqt)|
+|Windows|[![Windows Build Status](https://ci.appveyor.com/api/projects/status/github/tetsurom/rxqt?svg=true)](https://ci.appveyor.com/api/projects/status/github/tetsurom/rxqt)|
 
 # RxQt
 The Reactive Extensions for Qt.
@@ -47,8 +49,46 @@ int main(int argc, char *argv[])
 }
 ```
 
+# APIs
+
+## from_signal
+
+```cpp
+observable<T> rxqt::from_signal(const QObject* sender, PointerToMemberFunction signal);
+```
+
+Convert Qt signal to a observable. `T` is decided as following.
+
+|Signal parameter type(s)|T |Note |
+|:---------------|:-|:----|
+|`void`|`long`|Count of signal emission|
+|`A0`|`A0`||
+|`A0, A1, ..., An` (n > 1)|`tuple<A0, A1, ..., An>`||
+
+```cpp
+template<size_t N>
+observable<T> rxqt::from_signal(const QObject* sender, PointerToMemberFunction signal);
+```
+
+Convert Qt signal, as N-ary function, to a observable. This can be used to convert private signals.
+
+```cpp
+auto o = from_signal(q, &QFileSystemWatcher::fileChanged); // ERROR. o is observable<tuple<QString, QFileSystemWatcher::QPrivateSignal>> where last type is private member.
+auto o = from_signal<1>(q, &QFileSystemWatcher::fileChanged); // OK. o is observable<QString>
+```
+
+## from_event
+
+```cpp
+observable<QEvent*> rxqt::from_event(QObject* object, QEvent::Type type);
+```
+
+Convert Qt event to a observable.
+
+# Contribution
+
+Issues or Pull Requests are welcomed :)
+
 # Requirement
+
 * [RxCpp](https://github.com/Reactive-Extensions/RxCpp)
-
-
-
