@@ -68,7 +68,7 @@ struct chunk_by_traits
 
     typedef rxsub::subject<marble_type> subject_type;
 
-    typedef std::pair<key_type, typename subject_type::subscriber_type> key_subscriber_pair_type;
+    typedef rxu::maybe<std::pair<key_type, typename subject_type::subscriber_type>> key_subscriber_pair_type;
 
     typedef grouped_observable<key_type, marble_type> grouped_observable_type;
 };
@@ -84,19 +84,18 @@ struct chunk_by
     typedef typename traits_type::subject_type subject_type;
     typedef typename traits_type::key_type key_type;
 
-    typedef typename traits_type::key_subscriber_pair_type group_map_type;
+    typedef typename traits_type::key_subscriber_pair_type group_pair_type;
     typedef std::vector<typename composite_subscription::weak_subscription> bindings_type;
 
     struct group_by_state_type
     {
         group_by_state_type(composite_subscription sl, predicate_type p)
             : source_lifetime(sl)
-            , groups(p)
             , observers(0)
         {}
         composite_subscription source_lifetime;
         rxsc::worker worker;
-        group_map_type groups;
+        group_pair_type last_value;
         std::atomic<int> observers;
     };
 
@@ -185,13 +184,22 @@ struct chunk_by
             if (selectedKey.empty()) {
                 return;
             }
-            auto g = state->groups.find(selectedKey.get());
-            if (g == state->groups.end()) {
+
+            if (!state->last_value.empty()) {
+                bool equal = !group_by_values::predicate(state->last_value->first, selectedKey.get()) &&
+                             !group_by_values::predicate(selectedKey.get(), state->last_value->first);
+                if (!equal) {
+                    state->last_value->second.on_completed();
+                    state->last_value.reset();
+                }
+            }
+
+            if (state->last_value.empty()) {
                 if (!dest.is_subscribed()) {
                     return;
                 }
                 auto sub = subject_type();
-                g = state->groups.insert(std::make_pair(selectedKey.get(), sub.get_subscriber())).first;
+                state->last_value.reset(std::make_pair(selectedKey.get(), sub.get_subscriber()));
                 dest.on_next(make_dynamic_grouped_observable<key_type, marble_type>(group_by_observable(state, sub, selectedKey.get())));
             }
             auto selectedMarble = on_exception(
@@ -201,17 +209,17 @@ struct chunk_by
             if (selectedMarble.empty()) {
                 return;
             }
-            g->second.on_next(std::move(selectedMarble.get()));
+            state->last_value->second.on_next(std::move(selectedMarble.get()));
         }
         void on_error(std::exception_ptr e) const {
-            for(auto& g : state->groups) {
-                g.second.on_error(e);
+            if(!state->last_value.empty()) {
+                state->last_value->second.on_error(e);
             }
             dest.on_error(e);
         }
         void on_completed() const {
-            for(auto& g : state->groups) {
-                g.second.on_completed();
+            if(!state->last_value.empty()) {
+                state->last_value->second.on_completed();
             }
             dest.on_completed();
         }
