@@ -10,7 +10,6 @@
 #include <QTimerEvent>
 
 Q_DECLARE_LOGGING_CATEGORY(rxqtEventLoop)
-Q_LOGGING_CATEGORY(rxqtEventLoop, "rxqt.qt_eventloop")
 
 namespace rxcpp {
 
