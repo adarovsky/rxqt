@@ -70,6 +70,7 @@ private:
 
                     auto& peek = q.top();
                     if (!peek.what.is_subscribed()) {
+                        qCDebug(rxqtEventLoop) << this << ": thread(" << QThread::currentThreadId() << "), is not subscribed, continuing";
                         q.pop();
                         continue;
                     }
@@ -79,8 +80,10 @@ private:
                         auto what = peek.what;
                         q.pop();
                         r.reset(q.empty());
+                        qCDebug(rxqtEventLoop) << this << ": thread(" << QThread::currentThreadId() << "), running item";
                         guard.unlock();
                         what(r.get_recurse());
+                        qCDebug(rxqtEventLoop) << this << ": thread(" << QThread::currentThreadId() << "), running item complete";
                         continue;
                     }
 
