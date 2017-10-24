@@ -8,6 +8,7 @@
 #include <QtDebug>
 #include <QLoggingCategory>
 #include <QTimerEvent>
+#include <QThread>
 
 Q_DECLARE_LOGGING_CATEGORY(rxqtEventLoop)
 
