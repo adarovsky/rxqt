@@ -6,7 +6,11 @@
 #include <QScopedPointer>
 #include <QTimer>
 #include <QtDebug>
+#include <QLoggingCategory>
 #include <QTimerEvent>
+
+Q_DECLARE_LOGGING_CATEGORY(rxqtEventLoop)
+Q_LOGGING_CATEGORY(rxqtEventLoop, "rxqt.qt_eventloop")
 
 namespace rxcpp {
 
@@ -36,11 +40,11 @@ private:
 
             virtual ~qtimer_worker_state()
             {
-//                qDebug() << this << ": thread(" << QThread::currentThreadId() << "), : deallocating, timer";
+                qCDebug(rxqtEventLoop) << this << ": thread(" << QThread::currentThreadId() << "), : deallocating, timer";
                 std::unique_lock<std::mutex> guard(lock);
                 kill_timer();
                 lifetime.unsubscribe();
-//                qDebug() << this << ": deallocating done, timer";
+                qCDebug(rxqtEventLoop) << this << ": deallocating done, timer";
             }
 
             explicit qtimer_worker_state(composite_subscription cs)
@@ -50,13 +54,13 @@ private:
 
             void timerEvent(QTimerEvent * event)
             {
-//                qDebug() << this << ": thread(" << QThread::currentThreadId() << "), : timer event from timer" << event->timerId();
+                qCDebug(rxqtEventLoop) << this << ": thread(" << QThread::currentThreadId() << "), : timer event from timer" << event->timerId();
                 handle_queue();
             }
 
             void handle_queue()
             {
-//                qDebug() << this << ": thread(" << QThread::currentThreadId() << "), : handle_queue()";
+                qCDebug(rxqtEventLoop) << this << ": thread(" << QThread::currentThreadId() << "), : handle_queue()";
                 forever {
                     std::unique_lock<std::mutex> guard(lock);
                     if (q.empty()) {
@@ -88,7 +92,7 @@ private:
 
             void kill_timer() {
                 if (!current_timer.empty()) {
-//                    qDebug() << this << ": thread(" << QThread::currentThreadId() << "), killing timer" << current_timer.get();
+                    qCDebug(rxqtEventLoop) << this << ": thread(" << QThread::currentThreadId() << "), killing timer" << current_timer.get();
                     killTimer(current_timer.get());
                 }
             }
@@ -96,7 +100,7 @@ private:
             void schedule_timer(std::chrono::milliseconds timeout) {
                 kill_timer();
                 current_timer.reset(startTimer(timeout, Qt::PreciseTimer));
-//                qDebug() << this << ": thread(" << QThread::currentThreadId() << "), started timer" << current_timer.get();
+                qCDebug(rxqtEventLoop) << this << ": thread(" << QThread::currentThreadId() << "), started timer" << current_timer.get();
             }
 
             composite_subscription lifetime;
