@@ -102,7 +102,7 @@ private:
 
             void schedule_timer(std::chrono::milliseconds timeout) {
                 kill_timer();
-                current_timer.reset(startTimer(timeout, Qt::PreciseTimer));
+                current_timer.reset(startTimer(timeout.count(), Qt::PreciseTimer));
                 qCDebug(rxqtEventLoop) << this << ": thread(" << QThread::currentThreadId() << "), started timer" << current_timer.get();
             }
 
